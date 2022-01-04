@@ -1,0 +1,96 @@
+apiVersion: v1
+kind: Service
+metadata:
+        name: problembank-server
+spec:
+        sessionAffinity: ClientIP
+        type: LoadBalancer
+        externalIPs:
+                - 210.94.194.102
+        selector:
+                app: problembank-server
+        ports:
+                - protocol: TCP
+                  port: 3003
+                  targetPort: 3003
+---
+apiVersion: v1
+kind: PersistentVolume
+metadata:
+  name: nfs-pv-bankslogs
+  labels:
+    name: nfs-pv-bankslogs
+spec:
+  capacity:
+    storage: 10Gi
+  volumeMode: Filesystem
+  accessModes:
+    - ReadWriteOnce
+  persistentVolumeReclaimPolicy: Retain
+  nfs:
+    path: /mnt/RAID-1/PROJECTS/bank_problem_log
+    server: 210.94.194.102
+---
+kind: PersistentVolumeClaim
+apiVersion: v1
+metadata:
+  name: nfs-pvc-banklogs
+spec:
+  volumeMode: Filesystem
+  accessModes:
+  - ReadWriteOnce
+  resources:
+    requests:
+      storage: 10Gi
+  selector:
+    matchLabels:
+      name: nfs-pv-bankslogs
+                  
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+        labels:
+                app: problembank-server
+        name: problembank-server
+spec:
+        replicas: 5
+        selector:
+                matchLabels:
+                        app: problembank-server
+        template:
+                metadata:
+                        labels:
+                                app: problembank-server
+                spec:
+                        affinity:
+                                podAntiAffinity:
+                                        requiredDuringSchedulingIgnoredDuringExecution:
+                                        - labelSelector:
+                                                  matchExpressions:
+                                                  - key: app
+                                                    operator: In
+                                                    values: 
+                                                    - problembank-server
+                                          topologyKey: "kubernetes.io/hostname"
+                        containers:
+                                - image: dguplms/problembank-server:11.1
+                                  name: problembank-server
+                                  ports:
+                                        - containerPort: 3003
+                                  volumeMounts:
+                                     - name: pvc-volume-banklog
+                                       mountPath: /usr/src/app/log
+                                  imagePullPolicy: Always
+                        volumes:
+                          - name: pvc-volume-banklog
+                            persistentVolumeClaim:
+                              claimName: nfs-pvc-banklogs
+                        restartPolicy: Always
+
+
+
+
+
+
+

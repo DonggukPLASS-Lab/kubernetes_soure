@@ -1,0 +1,36 @@
+apiVersion: v1
+kind: Service
+metadata:
+        name: plms
+spec:
+        sessionAffinity: ClientIP
+        selector:
+                app: plms
+        ports:
+                - name: http
+                  port: 5109
+                  targetPort: 5109                 
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+        labels:
+                app: plms
+        name: plms
+spec:
+        selector:
+                matchLabels:
+                        app: plms
+        template:
+                metadata:
+                        labels:
+                                app: plms
+                spec:
+                        containers:
+                                - image: dguplms/moodle:1.5.01
+                                  name: plms
+                                  command: ['apachectl', '-D', 'FOREGROUND']
+                                  ports:
+                                            - containerPort: 5109
+                        imagePullSecrets:
+                                - name: regcred

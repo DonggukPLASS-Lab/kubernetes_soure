@@ -1,0 +1,49 @@
+apiVersion: v1
+kind: Service
+metadata:
+        name: problembank-client
+spec:
+        sessionAffinity: ClientIP
+        type: LoadBalancer   
+        externalIPs:
+                - 210.94.194.102
+        selector:
+                app: problembank-client
+        ports:
+                - protocol: TCP
+                  port: 5112
+                  targetPort: 5112
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+        labels:
+                app: problembank-client
+        name: problembank-client
+spec:
+        replicas: 5
+        selector:
+                matchLabels:
+                        app: problembank-client
+        template:
+                metadata:
+                        labels:
+                                app: problembank-client
+                spec:
+                        affinity:
+                                podAntiAffinity:
+                                        requiredDuringSchedulingIgnoredDuringExecution:
+                                        - labelSelector:
+                                                  matchExpressions:
+                                                  - key: app
+                                                    operator: In
+                                                    values: 
+                                                    - problembank-client
+                                          topologyKey: "kubernetes.io/hostname"
+                        containers:
+                                - image: dguplms/problembank-client:11.1
+                                  name: problembank-client
+                                  ports:
+                                          - containerPort: 5112
+                                  imagePullPolicy: Always
+                        restartPolicy: Always
